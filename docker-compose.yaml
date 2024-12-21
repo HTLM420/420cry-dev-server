@@ -1,0 +1,16 @@
+services:
+  proxy:
+    image: nginx:1.23.3
+    restart: unless-stopped
+    volumes:
+      - ./docker/proxy/nginx-templates:/etc/nginx/templates
+      - ./docker/proxy/proxy_params:/etc/nginx/proxy_params
+      - ./certs/420cry.test.crt:/etc/nginx/certs/420cry.test.crt
+      - ./certs/420cry.test.key:/etc/nginx/certs/420cry.test.key
+    ports:
+      - "80:80"
+      - "443:443"
+
+networks:
+  default:
+    name: 420cry.test

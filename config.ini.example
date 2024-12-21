@@ -1,0 +1,8 @@
+# The location of your SSH private key, used for communicating with GitHub.
+SSH_PRIVATE_KEY=~/.ssh/id_rsa
+
+# Directory where the projects will be stored.
+PROJECTS_DIRECTORY=~/projects/420cry
+
+# Projects which will be managed by this script. You may only include projects you use to make actions faster.
+PROJECTS="api"

@@ -1,0 +1,116 @@
+#!/bin/bash
+set -e
+
+# Directories and Configuration
+SCRIPT_DIR="$(cd -- "$(dirname "$0")" >/dev/null 2>&1; pwd -P )"
+BASE_DIR="$(dirname "$SCRIPT_DIR")"
+CONFIG_FILE=$BASE_DIR/config.ini
+RELEASE_ALL_PROJECTS="api"
+
+IS_MACOS=0
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    IS_MACOS=1
+fi
+
+# Make a sed alias because macOS and GNU Linux have some differences
+if [ "$IS_MACOS" -eq 1 ]; then
+    SEDINPLACE="sed -i ''"
+else
+    SEDINPLACE="sed -i"
+fi
+
+# Command Handlers
+help() {
+    echo "420cry - Command Line Tool"
+    echo
+    echo "Available Commands:"
+    echo "  up                 Start the Docker containers"
+    echo "  down               Stop the Docker containers"
+    echo "  install:script     Install the script alias and completions"
+    echo "  help               Display this help message"
+}
+
+up() {
+    cd "$BASE_DIR"
+    docker compose up -d
+
+    for PROJECT in $PROJECTS; do
+        echo "Starting $PROJECT"
+        cd "$PROJECTS_DIRECTORY/$PROJECT"
+        docker compose up -d --build
+    done
+}
+
+down() {
+    for PROJECT in $PROJECTS; do
+        echo "Stopping $PROJECT"
+        cd "$PROJECTS_DIRECTORY/$PROJECT"
+        docker compose down
+    done
+
+    cd "$BASE_DIR"
+    docker compose down
+}
+
+installScript() {
+    ALIAS="alias 420cry='$BASE_DIR/bin/420cry'"
+
+    echo "Adding alias '420cry' to your shell configuration."
+    if [[ "$IS_MACOS" -eq 1 ]]; then
+        SHELL_CONFIG="$HOME/.bash_profile"
+        echo "$ALIAS" >>"$SHELL_CONFIG"
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        SHELL_CONFIG="$HOME/.bashrc"
+        echo "$ALIAS" >>"$SHELL_CONFIG"
+    elif [[ "$OSTYPE" == "msys"* || "$OSTYPE" == "cygwin"* ]]; then
+        SHELL_CONFIG="$HOME/.bashrc" # Windows Git Bash or Cygwin
+        echo "$ALIAS" >>"$SHELL_CONFIG"
+    else
+        echo "Unsupported OS: Please manually add the alias to your shell configuration."
+        return 1
+    fi
+
+    echo "Alias added to $SHELL_CONFIG. Please restart your terminal or run 'source $SHELL_CONFIG' to activate the alias."
+
+    # Add shell completions
+    if [[ "$IS_MACOS" -eq 1 ]]; then
+        COMPLETIONS_DIR="/opt/homebrew/Cellar/bash-completion@2/2.14.0/share/bash-completion/completions"
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        COMPLETIONS_DIR="$(pkg-config --variable=completionsdir bash-completion 2>/dev/null || echo '/usr/share/bash-completion/completions')"
+    else
+        echo "Completions not supported on this platform. Skipping."
+        return 0
+    fi
+
+    if [[ -d "$COMPLETIONS_DIR" ]]; then
+        sudo ln -sf "$BASE_DIR/bin/420cry.completion" "$COMPLETIONS_DIR/420cry"
+        echo "Shell completion script installed to $COMPLETIONS_DIR."
+    else
+        echo "Completions directory not found. Skipping shell completion setup."
+    fi
+}
+
+
+# Main Script
+COMMAND="$1" # Capture the first argument as COMMAND
+
+if [[ -z "$COMMAND" || "$COMMAND" == "help" ]]; then
+    help
+    exit 0
+fi
+
+case "$COMMAND" in
+    "up")
+        up
+        ;;
+    "down")
+        down
+        ;;
+    "install:script")
+        installScript
+        ;;
+    *)
+        echo "Unknown command: $COMMAND"
+        echo "Use '420cry help' to see the list of available commands."
+        ;;
+esac
