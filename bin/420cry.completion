@@ -1,0 +1,41 @@
+#!/bin/bash
+
+_420cry_complete_subcommands() {
+    subcommands=(
+    "up" "down"
+    )
+
+    _420cry_complete_array ${subcommands[@]}
+}
+
+_420cry_complete_project_command() {
+    local position=${#COMP_WORDS[@]}
+    if [ $position == 3 ]; then
+        _420cry_complete_projects
+    fi
+}
+
+_420cry_read_user_config() {
+    # Try  to read config file from default location. If not found we use some sane defaults.
+
+    local config_file_default=~/projects/dwc/dev-server/config.ini
+    if [ -s "$config_file_default" ]; then
+        # shellcheck source=config.ini
+        . "$config_file_default"
+    else
+        # Fallback to default projects list
+        PROJECTS="api"
+    fi
+}
+
+_420cry_module() {
+    _420cry_read_user_config
+
+    local position=${#COMP_WORDS[@]}
+    if [ $position == 2 ]; then
+        _420cry_complete_subcommands
+    fi
+}
+
+complete -F _420cry_module 420cry
+COMP_WORDBREAKS=${COMP_WORDBREAKS//:}
